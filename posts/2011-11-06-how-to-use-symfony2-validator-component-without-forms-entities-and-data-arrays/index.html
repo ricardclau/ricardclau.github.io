@@ -1,0 +1,262 @@
+<!doctype html><html class=no-js lang=en><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta http-equiv=x-ua-compatible content="IE=edge"><title>How to use Symfony2 validator component without forms (Entities and data arrays) - Ricard Clau</title><script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script><meta name=description content><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link rel=dns-prefetch href=//fonts.googleapis.com><link rel=dns-prefetch href=//fonts.gstatic.com><link rel=stylesheet href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700"><link rel=stylesheet href=/css/style.css><link rel="shortcut icon" href=/favicon.ico><script type=application/javascript>var doNotTrack=false;if(!doNotTrack){window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;ga('create','UA-1309891-8','auto');ga('send','pageview');}</script><script async src=https://www.google-analytics.com/analytics.js></script></head><body class=body><div class="container container--outer"><header class=header><div class="container header__container"><div class=logo><a class=logo__link href=/ title="Ricard Clau" rel=home><div class="logo__item logo__text"><div class=logo__title>Ricard Clau</div></div></a></div><nav class=menu><button class=menu__btn aria-haspopup=true aria-expanded=false tabindex=0>
+<span class=menu__btn-title tabindex=-1>Menu</span></button><ul class=menu__list><li class=menu__item><a class=menu__link href=/about-me><span class=menu__text>About me</span></a></li><li class=menu__item><a class=menu__link href=/curriculum-vitae-en><span class=menu__text>CV</span></a></li></ul></nav></div></header><div class="wrapper flex"><div class=primary><main class=main role=main><article class=post><header class=post__header><h1 class=post__title>How to use Symfony2 validator component without forms (Entities and data arrays)</h1></header><div class="content post__content clearfix"><p>There seems to be a lot of confusion when using Symfony2 validation outside CRUD and Forms but the thing is that these component can be used in many ways to validate stuff all around the application.</p><p>I will show 2 examples of how we use validation component at <a href=http://www.ulabox.com target=_blank>Ulabox</a> for 2 quite common issues in e-commerce:</p><ul><li>Credit Card Validation using Entity Classes (without being linked to a table) and Annotations<br></li><li>Customer Register array data validation</li></ul><h3 id=validating-credit-cards-example>Validating Credit Cards Example</h3><p>For this example I will use Entity classes (although they are not linked to Doctrine2 on any database) and annotations. There will be an abstract entity CreditCard and 3 entities extending from it (Visa, Mastercard and American Express)</p><p>So the 4 Entities created look like this:</p><ul><li>Abstract class CreditCard</li></ul><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-php data-lang=php><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 1</span><span style=color:#75715e>&lt;?php</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 2</span><span style=color:#66d9ef>namespace</span> <span style=color:#a6e22e>Ulabox\PaymentBundle\Services\TPV\Entity</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 3</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 4</span><span style=color:#66d9ef>use</span> <span style=color:#a6e22e>Symfony\Component\Validator\Constraints</span> <span style=color:#66d9ef>as</span> <span style=color:#a6e22e>Assert</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 5</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 6</span><span style=color:#66d9ef>abstract</span> <span style=color:#66d9ef>class</span> <span style=color:#a6e22e>CreditCard</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 7</span>{
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 8</span>    <span style=color:#e6db74>/**
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 9</span><span style=color:#e6db74>     * @Assert\NotBlank()
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">10</span><span style=color:#e6db74>     */</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">11</span>    <span style=color:#66d9ef>public</span> $cardnumber;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">12</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">13</span>    <span style=color:#e6db74>/**
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">14</span><span style=color:#e6db74>     * @Assert\NotBlank()
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">15</span><span style=color:#e6db74>     * @Assert\Regex(pattern=&#34;/^[0-9]{3,4}$/&#34;, message=&#34;payment.validations.cvv.invalidcvv&#34;)
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">16</span><span style=color:#e6db74>     */</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">17</span>    <span style=color:#66d9ef>public</span> $cvv;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">18</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">19</span>    <span style=color:#e6db74>/**
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">20</span><span style=color:#e6db74>     * Format needs to be yymm
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">21</span><span style=color:#e6db74>     *
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">22</span><span style=color:#e6db74>     * @Assert\NotBlank()
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">23</span><span style=color:#e6db74>     * @Assert\Regex(pattern=&#34;/^[0-9]{4}$/&#34;, message=&#34;payment.validations.expmonth.invalidexpdate&#34;)
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">24</span><span style=color:#e6db74>     */</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">25</span>    <span style=color:#66d9ef>public</span> $expirydate;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">26</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">27</span>    <span style=color:#e6db74>/**
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">28</span><span style=color:#e6db74>     * This is based in Luhn Algorithm
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">29</span><span style=color:#e6db74>     * @see http://en.wikipedia.org/wiki/Luhn_algorithm
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">30</span><span style=color:#e6db74>     *
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">31</span><span style=color:#e6db74>     * @Assert\True(message=&#34;payment.validations.cardnumber.checksum&#34;)
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">32</span><span style=color:#e6db74>     * @return bool
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">33</span><span style=color:#e6db74>     */</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">34</span>   <span style=color:#66d9ef>public</span> <span style=color:#66d9ef>function</span> <span style=color:#a6e22e>isChecksumCorrect</span>()
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">35</span>   {
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">36</span>        $cardnumber <span style=color:#f92672>=</span> $this<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>cardnumber</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">37</span>        
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">38</span>        $aux <span style=color:#f92672>=</span> <span style=color:#e6db74>&#39;&#39;</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">39</span>        <span style=color:#66d9ef>foreach</span> (<span style=color:#a6e22e>str_split</span>(<span style=color:#a6e22e>strrev</span>($cardnumber)) <span style=color:#66d9ef>as</span> $pos <span style=color:#f92672>=&gt;</span> $digit) {
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">40</span>            <span style=color:#75715e>// Multiply * 2 all even digits
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">41</span><span style=color:#75715e></span>            $aux <span style=color:#f92672>.=</span> ($pos <span style=color:#f92672>%</span> <span style=color:#ae81ff>2</span> <span style=color:#f92672>!=</span> <span style=color:#ae81ff>0</span>) <span style=color:#f92672>?</span> $digit <span style=color:#f92672>*</span> <span style=color:#ae81ff>2</span> <span style=color:#f92672>:</span> $digit;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">42</span>        }
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">43</span>        <span style=color:#75715e>// Sum all digits in string
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">44</span><span style=color:#75715e></span>        $checksum <span style=color:#f92672>=</span> <span style=color:#a6e22e>array_sum</span>(<span style=color:#a6e22e>str_split</span>($aux));
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">45</span>        
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">46</span>        <span style=color:#75715e>// Card is OK if the sum is an even multiple of 10 and not 0
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">47</span><span style=color:#75715e></span>        <span style=color:#66d9ef>return</span> ($checksum <span style=color:#f92672>!=</span> <span style=color:#ae81ff>0</span> <span style=color:#f92672>&amp;&amp;</span> $checksum <span style=color:#f92672>%</span> <span style=color:#ae81ff>10</span> <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span>);
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">48</span>    }
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">49</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">50</span>    <span style=color:#e6db74>/**
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">51</span><span style=color:#e6db74>     * @Assert\True(message=&#34;payment.validations.expmonth.cardexpired&#34;)
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">52</span><span style=color:#e6db74>     * @return bool
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">53</span><span style=color:#e6db74>     */</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">54</span>    <span style=color:#66d9ef>public</span> <span style=color:#66d9ef>function</span> <span style=color:#a6e22e>isExpirationDateValid</span>()
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">55</span>    {
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">56</span>        <span style=color:#66d9ef>if</span>(<span style=color:#a6e22e>substr</span>($this<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>expirydate</span>, <span style=color:#ae81ff>2</span>, <span style=color:#ae81ff>2</span>) <span style=color:#f92672>&amp;</span><span style=color:#a6e22e>lt</span>; <span style=color:#ae81ff>1</span> <span style=color:#f92672>||</span> <span style=color:#a6e22e>substr</span>($this<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>expirydate</span>, <span style=color:#ae81ff>2</span>, <span style=color:#ae81ff>2</span>) <span style=color:#f92672>&gt;</span> <span style=color:#ae81ff>12</span>) <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>false</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">57</span>        <span style=color:#66d9ef>if</span>($this<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>expirydate</span> <span style=color:#f92672>&amp;</span><span style=color:#a6e22e>lt</span>; <span style=color:#a6e22e>date</span>(<span style=color:#e6db74>&#39;ym&#39;</span>)) <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>false</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">58</span>    }
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">59</span>}
+</code></pre></div><ul><li>Visa extending from CreditCard</li></ul><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-php data-lang=php><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 1</span><span style=color:#75715e>&lt;?php</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 2</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 3</span><span style=color:#66d9ef>namespace</span> <span style=color:#a6e22e>Ulabox\PaymentBundle\Services\TPV\Entity</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 4</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 5</span><span style=color:#66d9ef>use</span> <span style=color:#a6e22e>Symfony\Component\Validator\Constraints</span> <span style=color:#66d9ef>as</span> <span style=color:#a6e22e>Assert</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 6</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 7</span><span style=color:#66d9ef>class</span> <span style=color:#a6e22e>Visa</span> <span style=color:#66d9ef>extends</span> <span style=color:#a6e22e>CreditCard</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 8</span>{
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 9</span>    <span style=color:#e6db74>/**
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">10</span><span style=color:#e6db74>     * @Assert\Regex(pattern=&#34;/^4[0-9]{12}(?:[0-9]{3})?$/&#34;, message=&#34;payment.validations.cardnumber.invalidvisa&#34;)
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">11</span><span style=color:#e6db74>     */</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">12</span>    <span style=color:#66d9ef>public</span> $cardnumber;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">13</span>}
+</code></pre></div><ul><li>Mastercard extending from CreditCard</li></ul><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-php data-lang=php><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 1</span><span style=color:#75715e>&lt;?php</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 2</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 3</span><span style=color:#66d9ef>namespace</span> <span style=color:#a6e22e>Ulabox\PaymentBundle\Services\TPV\Entity</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 4</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 5</span><span style=color:#66d9ef>use</span> <span style=color:#a6e22e>Symfony\Component\Validator\Constraints</span> <span style=color:#66d9ef>as</span> <span style=color:#a6e22e>Assert</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 6</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 7</span><span style=color:#66d9ef>class</span> <span style=color:#a6e22e>Mastercard</span> <span style=color:#66d9ef>extends</span> <span style=color:#a6e22e>CreditCard</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 8</span>{
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 9</span>    <span style=color:#e6db74>/**
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">10</span><span style=color:#e6db74>     * @Assert\Regex(pattern=&#34;/^5[1-5][0-9]{14}$/&#34;, message=&#34;payment.validations.cardnumber.invalidmastercard&#34;)
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">11</span><span style=color:#e6db74>     */</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">12</span>    <span style=color:#66d9ef>public</span> $cardnumber;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">13</span>}
+</code></pre></div><ul><li>Amex extending from CreditCard</li></ul><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-php data-lang=php><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 1</span><span style=color:#75715e>&lt;?php</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 2</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 3</span><span style=color:#66d9ef>namespace</span> <span style=color:#a6e22e>Ulabox\PaymentBundle\Services\TPV\Entity</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 4</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 5</span><span style=color:#66d9ef>use</span> <span style=color:#a6e22e>Symfony\Component\Validator\Constraints</span> <span style=color:#66d9ef>as</span> <span style=color:#a6e22e>Assert</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 6</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 7</span><span style=color:#66d9ef>class</span> <span style=color:#a6e22e>Amex</span> <span style=color:#66d9ef>extends</span> <span style=color:#a6e22e>CreditCard</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 8</span>{
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 9</span>    <span style=color:#e6db74>/**
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">10</span><span style=color:#e6db74>     * @Assert\Regex(pattern=&#34;/^3[47][0-9]{13}$/&#34;, message=&#34;payment.validations.cardnumber.invalidamex&#34;)
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">11</span><span style=color:#e6db74>     */</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">12</span>    <span style=color:#66d9ef>public</span> $cardnumber;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">13</span>}
+</code></pre></div><ul><li>And my code in my service layer is as follows:</li></ul><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-php data-lang=php><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 1</span><span style=color:#75715e>&lt;?php</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 2</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 3</span><span style=color:#e6db74>/**
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 4</span><span style=color:#e6db74> * Imagine that we are receiving a Card Data somewhere and our class we have set
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 5</span><span style=color:#e6db74> *   protected $method;
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 6</span><span style=color:#e6db74> *   protected $cardnumber;
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 7</span><span style=color:#e6db74> *   protected $cvv;
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 8</span><span style=color:#e6db74> *   protected $expirydate;
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 9</span><span style=color:#e6db74> *   protected $cardholder;
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">10</span><span style=color:#e6db74> */</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">11</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">12</span><span style=color:#66d9ef>use</span> <span style=color:#a6e22e>Ulabox\PaymentBundle\Services\TPV\Entity</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">13</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">14</span>    <span style=color:#e6db74>/**
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">15</span><span style=color:#e6db74>     * Returns entity to Validate payment params (like cardnumber format, etc...)
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">16</span><span style=color:#e6db74>     *
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">17</span><span style=color:#e6db74>     * @return Entity\CreditCard interface entity
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">18</span><span style=color:#e6db74>     * @throws HttpException 400 if invalid payment method is supplied
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">19</span><span style=color:#e6db74>     */</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">20</span>    <span style=color:#66d9ef>protected</span> <span style=color:#66d9ef>function</span> <span style=color:#a6e22e>getCreditCardEntity</span>()
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">21</span>    {
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">22</span>        <span style=color:#66d9ef>switch</span> ($this<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>method</span>) {
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">23</span>            <span style=color:#66d9ef>case</span> <span style=color:#e6db74>&#39;visa&#39;</span><span style=color:#f92672>:</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">24</span>                <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>new</span> <span style=color:#a6e22e>Entity\Visa</span>();
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">25</span>                <span style=color:#66d9ef>break</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">26</span>            <span style=color:#66d9ef>case</span> <span style=color:#e6db74>&#39;mastercard&#39;</span><span style=color:#f92672>:</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">27</span>                <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>new</span> <span style=color:#a6e22e>Entity\Mastercard</span>();
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">28</span>                <span style=color:#66d9ef>break</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">29</span>            <span style=color:#66d9ef>case</span> <span style=color:#e6db74>&#39;amex&#39;</span><span style=color:#f92672>:</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">30</span>                <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>new</span> <span style=color:#a6e22e>Entity\Amex</span>();
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">31</span>                <span style=color:#66d9ef>break</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">32</span>            <span style=color:#66d9ef>default</span><span style=color:#f92672>:</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">33</span>                <span style=color:#66d9ef>throw</span> <span style=color:#66d9ef>new</span> <span style=color:#a6e22e>HttpException</span>(<span style=color:#ae81ff>400</span>, <span style=color:#e6db74>&#39;Payment method &#39;</span> <span style=color:#f92672>.</span> $this<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>method</span> <span style=color:#f92672>.</span> <span style=color:#e6db74>&#39; not developed as Entity. Check Services/TPV/Entity&#39;</span>);
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">34</span>        }
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">35</span>    }
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">36</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">37</span>    <span style=color:#e6db74>/**
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">38</span><span style=color:#e6db74>     * Validates payment data with Symfony2 standard Validator service
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">39</span><span style=color:#e6db74>     *
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">40</span><span style=color:#e6db74>     * @throws HttpException 400 if invalid data is found in validator
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">41</span><span style=color:#e6db74>     */</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">42</span>    <span style=color:#66d9ef>protected</span> <span style=color:#66d9ef>function</span> <span style=color:#a6e22e>validatePaymentData</span>()
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">43</span>    {
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">44</span>        $creditcard <span style=color:#f92672>=</span> $this<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>getCreditCardEntity</span>();
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">45</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">46</span>        $creditcard<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>cardnumber</span> <span style=color:#f92672>=</span> $this<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>cardnumber</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">47</span>        $creditcard<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>cvv</span> <span style=color:#f92672>=</span> $this<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>cvv</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">48</span>        $creditcard<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>expirydate</span> <span style=color:#f92672>=</span> $this<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>expirydate</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">49</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">50</span>        <span style=color:#e6db74>/**
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">51</span><span style=color:#e6db74>         * Validate expects an object with all constraints defined in it and just validates its properties to what is expected to satisfy
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">52</span><span style=color:#e6db74>         */</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">53</span>        $errors <span style=color:#f92672>=</span> $this<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>container</span><span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>get</span>(<span style=color:#e6db74>&#39;validator&#39;</span>)<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>validate</span>($creditcard);
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">54</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">55</span>        <span style=color:#66d9ef>if</span> (<span style=color:#a6e22e>count</span>($errors) <span style=color:#f92672>&gt;</span> <span style=color:#ae81ff>0</span>) {
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">56</span>            <span style=color:#66d9ef>throw</span> <span style=color:#66d9ef>new</span> <span style=color:#a6e22e>HttpException</span>(<span style=color:#ae81ff>400</span>, $errors[<span style=color:#ae81ff>0</span>]<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>getMessage</span>());
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">57</span>        }
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">58</span>    }
+</code></pre></div><p>Can this be cleaner? We just define constraints using annotations, get the Entity class to test and just call validate with the object recovered. I think the code is pretty self explanatory, but in case you have any doubts please feel free to comment.</p><p>Please note that errors are coded like this: message=&ldquo;payment.validations.cardnumber.invalidamex&rdquo; so that we can later translate in Twig with {{ error | trans }}:</p><p>(This is content for Resources/translations/messages.en.yml but could be applied to any language used in our web application)</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 1</span>payment:
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 2</span>  validations:
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 3</span>    cardnumber:
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 4</span>      invalidvisa: This is not a valid VISA number
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 5</span>      invalidmastercard: This is not a valid MASTERCARD number
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 6</span>      invalidamex: This is not a valid AMEX number
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 7</span>      checksum: Invalid credit card number
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 8</span>    cvv:
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 9</span>      invalidcvv: Invalid CVV
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">10</span>    expmonth:
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">11</span>      cardexpired: Credit card expired
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">12</span>      invalidexpdate: Invalid expiration date</code></pre></div><h3 id=validating-register-data-array>Validating Register Data array</h3><p>In this example I will deal directly with the request data array and I will define the constraint with good old plain PHP</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-php data-lang=php><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 1</span><span style=color:#75715e>&lt;?php</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 2</span><span style=color:#66d9ef>use</span> <span style=color:#a6e22e>Ulabox\CoreBundle\Entity\Customer</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 3</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 4</span><span style=color:#66d9ef>use</span> <span style=color:#a6e22e>Symfony\Component\Validator\Constraints\Email</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 5</span><span style=color:#66d9ef>use</span> <span style=color:#a6e22e>Symfony\Component\Validator\Constraints\NotBlank</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 6</span><span style=color:#66d9ef>use</span> <span style=color:#a6e22e>Symfony\Component\Validator\Constraints\MinLength</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 7</span><span style=color:#66d9ef>use</span> <span style=color:#a6e22e>Symfony\Component\Validator\Constraints\MaxLength</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 8</span><span style=color:#66d9ef>use</span> <span style=color:#a6e22e>Symfony\Component\Validator\Constraints\Collection</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79"> 9</span><span style=color:#66d9ef>use</span> <span style=color:#a6e22e>Symfony\Component\Validator\Constraints\True</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">10</span><span style=color:#66d9ef>use</span> <span style=color:#a6e22e>Symfony\Component\Validator\Constraints\NotNull</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">11</span><span style=color:#66d9ef>use</span> <span style=color:#a6e22e>Symfony\Component\Validator\Constraints\Callback</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">12</span><span style=color:#66d9ef>use</span> <span style=color:#a6e22e>Symfony\Component\Validator\ExecutionContext</span>;
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">13</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">14</span>   <span style=color:#e6db74>/**
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">15</span><span style=color:#e6db74>     * Validates Register Data passed as an array to be reused
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">16</span><span style=color:#e6db74>     * 
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">17</span><span style=color:#e6db74>     * @throws \Symfony\Component\HttpKernel\Exception\HttpException
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">18</span><span style=color:#e6db74>     * @param array $registerData
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">19</span><span style=color:#e6db74>     */</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">20</span>    <span style=color:#66d9ef>protected</span> <span style=color:#66d9ef>function</span> <span style=color:#a6e22e>validateRegisterData</span>(<span style=color:#66d9ef>array</span> $registerData)
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">21</span>    {
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">22</span>        <span style=color:#e6db74>/**
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">23</span><span style=color:#e6db74>          * Imagine that we get an array with these keys: email, pass, postcode and termandco (which is actually Ulabox register data needed)
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">24</span><span style=color:#e6db74>          */</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">25</span>        $collectionConstraint <span style=color:#f92672>=</span> <span style=color:#66d9ef>new</span> <span style=color:#a6e22e>Collection</span>(<span style=color:#66d9ef>array</span>(
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">26</span>            <span style=color:#e6db74>&#39;email&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#66d9ef>array</span>(
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">27</span>                        <span style=color:#66d9ef>new</span> <span style=color:#a6e22e>NotBlank</span>(),
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">28</span>                        <span style=color:#66d9ef>new</span> <span style=color:#a6e22e>Email</span>(),
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">29</span>                        <span style=color:#66d9ef>new</span> <span style=color:#a6e22e>Callback</span>(<span style=color:#66d9ef>array</span>(<span style=color:#e6db74>&#39;methods&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#66d9ef>array</span>(
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">30</span>                                        <span style=color:#66d9ef>array</span>($this, <span style=color:#e6db74>&#39;checkMailNotRegistered&#39;</span>)
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">31</span>                                     ))),
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">32</span>                        ),
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">33</span>            <span style=color:#e6db74>&#39;pass&#39;</span>  <span style=color:#f92672>=&gt;</span> <span style=color:#66d9ef>array</span>(
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">34</span>                         <span style=color:#66d9ef>new</span> <span style=color:#a6e22e>NotBlank</span>(),
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">35</span>                         <span style=color:#66d9ef>new</span> <span style=color:#a6e22e>MinLength</span>(<span style=color:#66d9ef>array</span>(<span style=color:#e6db74>&#39;limit&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#ae81ff>8</span>)),
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">36</span>                         <span style=color:#66d9ef>new</span> <span style=color:#a6e22e>MaxLength</span>(<span style=color:#66d9ef>array</span>(<span style=color:#e6db74>&#39;limit&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#ae81ff>22</span>)),
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">37</span>                        ),
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">38</span>            <span style=color:#e6db74>&#39;postcode&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#66d9ef>array</span>(
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">39</span>                         <span style=color:#66d9ef>new</span> <span style=color:#a6e22e>NotBlank</span>(),
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">40</span>                         <span style=color:#66d9ef>new</span> <span style=color:#a6e22e>MinLength</span>(<span style=color:#66d9ef>array</span>(<span style=color:#e6db74>&#39;limit&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#ae81ff>5</span>)),
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">41</span>                         <span style=color:#66d9ef>new</span> <span style=color:#a6e22e>MaxLength</span>(<span style=color:#66d9ef>array</span>(<span style=color:#e6db74>&#39;limit&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#ae81ff>5</span>)),
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">42</span>                         <span style=color:#66d9ef>new</span> <span style=color:#a6e22e>Callback</span>(<span style=color:#66d9ef>array</span>(<span style=color:#e6db74>&#39;methods&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#66d9ef>array</span>(
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">43</span>                                         <span style=color:#66d9ef>array</span>($this, <span style=color:#e6db74>&#39;isValidPostalCode&#39;</span>)
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">44</span>                                      ))),
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">45</span>                         ),
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">46</span>            <span style=color:#e6db74>&#39;termandcon&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#66d9ef>array</span>(
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">47</span>                         <span style=color:#66d9ef>new</span> <span style=color:#a6e22e>NotNull</span>(),
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">48</span>                         <span style=color:#66d9ef>new</span> <span style=color:#66d9ef>True</span>(),
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">49</span>                        ),
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">50</span>        ));
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">51</span>        
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">52</span>        <span style=color:#e6db74>/**
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">53</span><span style=color:#e6db74>         * validateValue expects either a scalar value and its constraint or an array and a constraint Collection (which actually extends Constraint)
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">54</span><span style=color:#e6db74>         */</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">55</span>        $errors <span style=color:#f92672>=</span> $this<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>container</span><span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>get</span>(<span style=color:#e6db74>&#39;validator&#39;</span>)<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>validateValue</span>($registerData, $collectionConstraint);
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">56</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">57</span>        <span style=color:#e6db74>/**
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">58</span><span style=color:#e6db74>         * To use symfony2 default validation errors, we must call it this way...
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">59</span><span style=color:#e6db74>         * Count is used as this is not an array but a ConstraintViolationList
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">60</span><span style=color:#e6db74>         */</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">61</span>        <span style=color:#66d9ef>if</span> (<span style=color:#a6e22e>count</span>($errors) <span style=color:#f92672>!==</span> <span style=color:#ae81ff>0</span>) {
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">62</span>            <span style=color:#66d9ef>throw</span> <span style=color:#66d9ef>new</span> <span style=color:#a6e22e>HttpException</span>(<span style=color:#ae81ff>400</span>, $errors[<span style=color:#ae81ff>0</span>]<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>getPropertyPath</span>() <span style=color:#f92672>.</span> <span style=color:#e6db74>&#39;:&#39;</span> <span style=color:#f92672>.</span> $this<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>container</span><span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>get</span>(<span style=color:#e6db74>&#39;translator&#39;</span>)<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>trans</span>($errors[<span style=color:#ae81ff>0</span>]<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>getMessage</span>(), <span style=color:#66d9ef>array</span>(), <span style=color:#e6db74>&#39;validators&#39;</span>));
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">63</span>        }
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">64</span>    }
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">65</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">66</span>    <span style=color:#e6db74>/**
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">67</span><span style=color:#e6db74>     * Validates PostalCode against Postalcode Entity
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">68</span><span style=color:#e6db74>     *
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">69</span><span style=color:#e6db74>     * @param string $postalcode
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">70</span><span style=color:#e6db74>     * @param \Symfony\Component\Validator\ExecutionContext $context
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">71</span><span style=color:#e6db74>     */</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">72</span>    <span style=color:#66d9ef>public</span> <span style=color:#66d9ef>function</span> <span style=color:#a6e22e>isValidPostalCode</span>($postalcode, <span style=color:#a6e22e>ExecutionContext</span> $context)
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">73</span>    {
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">74</span>        <span style=color:#66d9ef>if</span> (<span style=color:#f92672>!</span>$this<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>container</span><span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>get</span>(<span style=color:#e6db74>&#39;logistics&#39;</span>)<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>checkPostalcode</span>($postalcode)) {
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">75</span>            $context<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>addViolation</span>(<span style=color:#e6db74>&#39;customer.register.invalidpostalcode&#39;</span>, <span style=color:#66d9ef>array</span>(), <span style=color:#66d9ef>null</span>);
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">76</span>        }
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">77</span>    }
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">78</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">79</span>    <span style=color:#e6db74>/**
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">80</span><span style=color:#e6db74>     * Checks that e-mail is not already registered
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">81</span><span style=color:#e6db74>     * 
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">82</span><span style=color:#e6db74>     * @param string $email
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">83</span><span style=color:#e6db74>     * @param \Symfony\Component\Validator\ExecutionContext $context
+</span><span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">84</span><span style=color:#e6db74>     */</span>
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">85</span>    <span style=color:#66d9ef>public</span> <span style=color:#66d9ef>function</span> <span style=color:#a6e22e>checkMailNotRegistered</span>($email, <span style=color:#a6e22e>ExecutionContext</span> $context)
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">86</span>    {
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">87</span>        $em <span style=color:#f92672>=</span> $this<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>container</span><span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>get</span>(<span style=color:#e6db74>&#39;doctrine&#39;</span>)<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>getEntityManager</span>();
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">88</span>        $customer <span style=color:#f92672>=</span> $em<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>getRepository</span>(<span style=color:#e6db74>&#39;UlaboxCoreBundle:Customer&#39;</span>)<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>findOneBy</span>(<span style=color:#66d9ef>array</span>(<span style=color:#e6db74>&#39;email&#39;</span> <span style=color:#f92672>=&gt;</span> $email));
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">89</span>        <span style=color:#66d9ef>if</span> ($customer <span style=color:#a6e22e>instanceof</span> <span style=color:#a6e22e>Customer</span>) {
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">90</span>            $context<span style=color:#f92672>-&gt;</span><span style=color:#a6e22e>addViolation</span>(<span style=color:#e6db74>&#39;customer.register.mailregistered&#39;</span>, <span style=color:#66d9ef>array</span>(), <span style=color:#66d9ef>null</span>);
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">91</span>        }
+<span style="margin-right:.4em;padding:0 .4em;color:#7c7c79">92</span>    }
+</code></pre></div><p>This time we are using directly the Constraints and <strong>building up a Collection of constraints</strong> that the array must satisfy. As you can see, this syntax make it easy to understand what the code is doing, even if you&rsquo;re not a talented programmer!</p><p>Note that some of them are quite simple (string lengths, email format, but there are some interesting ones with the <strong>Callback constraint</strong>. In this case, we also validate that <strong>an email cannot be registered twice</strong> and that <strong>the postalcode is a real one</strong> and not just one that fits the 5 length characters. Of course, for a fully working example, repositories for that should be created but I think that again the code is pretty self-explanatory.</p><p>Also note that again, messages are &ldquo;codified&rdquo; to use translations in yml, but this time we are not using a messages.LANG.yml file but a <strong>validators.LANG.yml</strong> file to store the messages. This is because Symfony2 has most of the common messages already coded in many languages so that we don&rsquo;t have to translate the &ldquo;This is not a valid e-mail&rdquo; message and stuff like this. And these translations are merged with our own ones.</p><p>This is achieved with $this-&gt;container-&gt;get(&lsquo;translator&rsquo;)-&gt;trans($errors[0]-&gt;getMessage(), array(), &lsquo;validators&rsquo;));</p><p>Hope you liked this pieces of code that I think can be useful for inspiration and understand a little bit more how Symfony2 validation (and translation) works!</p></div></article></main></div></div><footer class=footer><div class="container footer__container flex"><div class=footer__copyright>&copy; 2021 Ricard Clau.
+<span class=footer__copyright-credits>Generated with <a href=https://gohugo.io/ rel="nofollow noopener" target=_blank>Hugo</a> and <a href=https://github.com/Vimux/Mainroad/ rel="nofollow noopener" target=_blank>Mainroad</a> theme.</span></div></div></footer></div><script async defer src=/js/menu.js></script></body></html>
